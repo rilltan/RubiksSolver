@@ -5,7 +5,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Main.cpp" />
-    <ClCompile Include="lib\glad.c" />
     <ClCompile Include="lib\imgui\imgui.cpp" />
     <ClCompile Include="lib\imgui\imgui_demo.cpp" />
     <ClCompile Include="lib\imgui\imgui_draw.cpp" />
@@ -13,10 +12,11 @@
     <ClCompile Include="lib\imgui\imgui_widgets.cpp" />
     <ClCompile Include="lib\imgui\backends\imgui_impl_glfw.cpp" />
     <ClCompile Include="lib\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src\cube.cpp" />
+    <ClCompile Include="src\cube_gui.cpp" />
+    <ClCompile Include="lib\glad.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="lib\glad.h" />
-    <ClInclude Include="lib\khrplatform.h" />
     <ClInclude Include="lib\GLFW\glfw3.h" />
     <ClInclude Include="lib\GLFW\glfw3native.h" />
     <ClInclude Include="lib\imgui\imconfig.h" />
@@ -28,6 +28,10 @@
     <ClInclude Include="lib\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="lib\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="lib\imgui\backends\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="src\cube.h" />
+    <ClInclude Include="lib\glad.h" />
+    <ClInclude Include="lib\khrplatform.h" />
+    <ClInclude Include="src\cube_gui.h" />
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="lib\imgui.natvis" />
