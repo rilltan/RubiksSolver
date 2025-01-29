@@ -20,6 +20,7 @@
 
 #include "cube_gui.h"
 #include <iostream>
+#include <string>
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
@@ -75,7 +76,7 @@ int main(int, char**)
 #endif
 
     // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1920, 1080, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(1920/2, 1080/2, "Rubik's Cube Solver", nullptr, nullptr);
     if (window == nullptr)
         return 1;
     glfwMakeContextCurrent(window);
@@ -139,11 +140,15 @@ int main(int, char**)
     style.ScaleAllSizes(WindowScale);
 
     // Our state
-    bool show_demo_window = true;
+    bool show_demo_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    CubeRenderer cubeRenderer;
+    CubeRenderer cubeRenderer = CubeRenderer("src/vertex_shader.glsl","");
 	unsigned int CubeRenderTexture = cubeRenderer.getTextureID();
+    ImVec2 cubeRendererWindowSize = ImVec2(1080, 1080);
+
+	Cube cube = { 0x00000000,0x11111111,0x22222222,0x33333333,0x44444444,0x55555555 };
+    std::vector<Move> solution;
 
     // Main loop
 #ifdef __EMSCRIPTEN__
@@ -159,7 +164,7 @@ int main(int, char**)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags
         glfwPollEvents();
         if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
         {
@@ -173,9 +178,7 @@ int main(int, char**)
 
 
 
-
-
-		cubeRenderer.Draw();
+		cubeRenderer.Draw2D(cube);
 
 		// ---------------------
 
@@ -189,12 +192,59 @@ int main(int, char**)
             ImGui::ShowDemoWindow(&show_demo_window);
 
         ImGui::Begin("Cube Window");
-        ImGui::SetWindowSize(ImVec2(1080, 1080));
         ImGui::BeginChild("CubeRender");
-		ImGui::Image((ImTextureID)CubeRenderTexture, ImVec2(1080, 1080), ImVec2(0,1), ImVec2(1,0));
+		ImGui::Image((ImTextureID)CubeRenderTexture, cubeRendererWindowSize, ImVec2(0,cubeRendererWindowSize.y / cubeRenderer.getMaxTextureSize()), ImVec2(cubeRendererWindowSize.x / cubeRenderer.getMaxTextureSize(),0));
+        if (ImGui::GetWindowSize().x != cubeRendererWindowSize.x or ImGui::GetWindowSize().y != cubeRendererWindowSize.y) {
+            cubeRendererWindowSize = ImGui::GetWindowSize();
+			cubeRenderer.Resize(cubeRendererWindowSize.x, cubeRendererWindowSize.y);
+        }
 		ImGui::EndChild();
         ImGui::End();
 
+		ImGui::Begin("Controls");
+        if (ImGui::Button("U")) cube = executeMove(cube, U);
+		ImGui::SameLine();
+		if (ImGui::Button("D")) cube = executeMove(cube, D);
+		ImGui::SameLine();
+		if (ImGui::Button("L")) cube = executeMove(cube, L);
+		ImGui::SameLine();
+		if (ImGui::Button("R")) cube = executeMove(cube, R);
+		ImGui::SameLine();
+		if (ImGui::Button("F")) cube = executeMove(cube, F);
+		ImGui::SameLine();
+		if (ImGui::Button("B")) cube = executeMove(cube, B);
+
+        if (ImGui::Button("U2")) cube = executeMove(cube, U2);
+        ImGui::SameLine();
+        if (ImGui::Button("D2")) cube = executeMove(cube, D2);
+        ImGui::SameLine();
+        if (ImGui::Button("L2")) cube = executeMove(cube, L2);
+        ImGui::SameLine();
+        if (ImGui::Button("R2")) cube = executeMove(cube, R2);
+        ImGui::SameLine();
+        if (ImGui::Button("F2")) cube = executeMove(cube, F2);
+        ImGui::SameLine();
+        if (ImGui::Button("B2")) cube = executeMove(cube, B2);
+
+        if (ImGui::Button("U'")) cube = executeMove(cube, U3);
+        ImGui::SameLine();
+        if (ImGui::Button("D'")) cube = executeMove(cube, D3);
+        ImGui::SameLine();
+        if (ImGui::Button("L'")) cube = executeMove(cube, L3);
+        ImGui::SameLine();
+        if (ImGui::Button("R'")) cube = executeMove(cube, R3);
+        ImGui::SameLine();
+        if (ImGui::Button("F'")) cube = executeMove(cube, F3);
+        ImGui::SameLine();
+        if (ImGui::Button("B'")) cube = executeMove(cube, B3);
+
+		if (ImGui::Button("Solve")) {
+			solution = solve(cube);
+		}
+		for (Move move : solution) {
+			ImGui::Text(MoveStrings[move].c_str());
+		}
+		ImGui::End();
 
         // Rendering
         ImGui::Render();

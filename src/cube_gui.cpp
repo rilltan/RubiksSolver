@@ -3,33 +3,16 @@
 #include <glad.h>
 #include <iostream>
 #include "cube_gui.h"
+#include <fstream>
+#include <sstream>
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
-//void generate2DVertexData(std::array<float, 3 * 9>& vertices, Cube& cube) {
-//	vertices[0] = -1.0f;
-//	vertices[1] = -1.0f;
-//	vertices[2] = 0.0f;
-//
-//	vertices[1*9 + 0] = -1.0f;
-//	vertices[1*9 + 1] = 1.0f;
-//	vertices[1*9 + 2] = 0.0f;
-//
-//	vertices[2*9 + 0] = 1.0f;
-//	vertices[2*9 + 1] = -1.0f;
-//	vertices[2*9 + 2] = 0.0f;
-//
-//	for (int i = 0; i < 3; i++) {
-//		vertices[i * 9 + 3] = 0.0f;
-//		vertices[i * 9 + 4] = 0.0f;
-//		vertices[i * 9 + 5] = 1.0f;
-//
-//		vertices[i * 9 + 6] = 1.0f;
-//		vertices[i * 9 + 7] = 1.0f;
-//		vertices[i * 9 + 8] = 1.0f;
-//	}
-//}
-
-CubeRenderer::CubeRenderer() {
-	currentSize = 1080;
+CubeRenderer::CubeRenderer(const char* vertexShaderPath, const char* fragmentShaderPath) {
+	currentWidth = 1080;
+	currentHeight = 1080;
+	maxTextureSize = 2048;
 
 	float squareVertices[] = {
 		-1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
@@ -37,28 +20,23 @@ CubeRenderer::CubeRenderer() {
 		-1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
 		-1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
 		1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-		1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f
+		1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
 	}; // x, y, z, normal x, normal y, normal z
 
-	// TEMPORARY setting up shaders
-	const char* vertexShaderSource = "#version 330 core\n"
-		"layout (location = 0) in vec3 aPos;\n"
-		"void main()\n"
-		"{\n"
-		"   gl_Position = vec4(aPos.x/2, aPos.y/2, aPos.z, 1.0);\n"
-		"}\0";
+	std::string vertexShaderCode =
+#include "vertex_shader.glsl"
+	const char* vertexShaderSource = vertexShaderCode.c_str();
 	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
 	glCompileShader(vertexShader);
-	const char* fragmentShaderSource = "#version 330 core\n"
-		"out vec4 FragColor;\n"
-		"void main()\n"
-		"{\n"
-		"   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-		"}\0";
+
+	std::string fragmentShaderCode =
+#include "fragment_shader.glsl"
+	const char* fragmentShaderSource = fragmentShaderCode.c_str();
 	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 	glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
 	glCompileShader(fragmentShader);
+
 	shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
@@ -83,7 +61,7 @@ CubeRenderer::CubeRenderer() {
 	// setting up output texture
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, currentSize, currentSize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, maxTextureSize, maxTextureSize, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -99,18 +77,70 @@ CubeRenderer::CubeRenderer() {
 
 	std::cout << "CubeRenderer initialized" << std::endl;
 }
-void CubeRenderer::Draw() {
+float positions[] = {
+	-0.25f, 0.5f, 0.0f,
+	-0.25f, -0.5f, 0.0f,
+	-0.75f, 0.0f, 0.0f,
+	0.25f, 0.0f, 0.0f,
+	-0.25f, 0.0f, 0.0f,
+	0.75f, 0.0f, 0.0f
+};
+float colours[] = {
+	1.0f,1.0f,1.0f,
+	1.0f,1.0f,0.0f,
+	1.0f,0.5f,0.0f,
+	1.0f,0.0f,0.0f,
+	0.0f,1.0f,0.0f,
+	0.0f,0.0f,1.0f
+};
+int indices[] = { 0,1,2,7,8,3,6,5,4 };
+void CubeRenderer::Draw2D(Cube& cube) {
 	glUseProgram(shaderProgram);
 	glBindVertexArray(vao);
 	glBindFramebuffer(GL_FRAMEBUFFER, tex_fbo);
-	glViewport(0, 0, currentSize, currentSize);
+	float aspectRatio = 4.0f / 3.0f;
+	int size = fmin(currentWidth, currentHeight*aspectRatio);
+	glViewport((currentWidth - size) / 2, (currentHeight - size) / 2, size, size);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+	for (int i = 0; i < 6; i++) {
+		for (int j = 0; j < 9; j++) {
+			glm::mat4 pvm = glm::translate(glm::mat4(1.0f), glm::vec3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]));
+			pvm = glm::scale(pvm, glm::vec3(0.25f));
+			pvm = glm::translate(pvm, glm::vec3(-2.0f/3.0f + (float)(j%3)*2.0f/3.0f, 2.0f / 3.0f - (float)(j / 3) * 2.0f / 3.0f,0.0f));
+			pvm = glm::scale(pvm, glm::vec3(0.3f));
+			glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "pvm"), 1, GL_FALSE, glm::value_ptr(pvm));
+			if (indices[j] == 8) {
+				glUniform3f(glGetUniformLocation(shaderProgram, "objectColor"), colours[i * 3], colours[i * 3 + 1], colours[i * 3 + 2]);
+			}
+			else {
+				int index = getSticker(cube, (Face)i, indices[j]);// cube[i] >> ((7 - indices[j]) * 4) & 0xF;
+				if (index >= 0 && index <= 5) {
+					glUniform3f(glGetUniformLocation(shaderProgram, "objectColor"), colours[index * 3], colours[index * 3 + 1], colours[index * 3 + 2]);
+				}
+				else {
+					throw std::runtime_error("Invalid cube");
+				}
+			}
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+void CubeRenderer::Draw3D() {
+
+}
 unsigned int CubeRenderer::getTextureID() const {
 	return tex;
+}
+unsigned int CubeRenderer::getMaxTextureSize() const {
+	return maxTextureSize;
+}
+void CubeRenderer::Resize(int width, int height) {
+	currentWidth = width;
+	currentHeight = height;
 }
