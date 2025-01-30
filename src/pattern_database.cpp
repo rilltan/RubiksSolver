@@ -52,7 +52,6 @@ bool stage1Complete_new(Cube& cube) {
 }
 
 int generate() {
-	// create pattern database for stage 1 to 2
 	int* data = new int[88179840];
 	int cperm = 0;
 	std::array<int, 8> perm = { 0,1,2,3,4,5,6,7 };

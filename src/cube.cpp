@@ -509,6 +509,7 @@ bool dfs(Cube cube, int depth, std::vector<Move>& allowedMoves, Move previous, s
 	}
 	return false;
 }
+
 bool dfs_thread(Cube cube, int depth, std::vector<Move>& allowedMoves, Move previous, std::function<bool(Cube&)> predicate, std::function<int(Cube&)> heuristic, std::array<Move,64>& moves, int moveLoc) {
 	if (depth == 0) {
 		return predicate(cube);
@@ -526,7 +527,7 @@ bool dfs_thread(Cube cube, int depth, std::vector<Move>& allowedMoves, Move prev
 	}
 	return false;
 }
-bool dfs_thread_init(Cube cube, int depth, std::vector<Move>& allowedMoves, Move previous, std::function<bool(Cube&)> predicate, std::function<int(Cube&)> heuristic, std::vector<Move>& moves) {
+bool dfs_thread_init(Cube cube, int depth, std::vector<Move> allowedMoves, Move previous, std::function<bool(Cube&)> predicate, std::function<int(Cube&)> heuristic, std::vector<Move>& moves) {
 	std::array<Move,64> moveList;
 	if (dfs_thread(cube, depth, allowedMoves, previous, predicate, heuristic, moveList, 0)) {
 		moves.push_back(previous);
@@ -541,25 +542,14 @@ bool dfs_thread_init(Cube cube, int depth, std::vector<Move>& allowedMoves, Move
 bool iterativeDeepening(Cube& cube, int depth, std::vector<Move>& allowedMoves, std::function<bool(Cube&)> predicate, std::function<int(Cube&)> heuristic, std::vector<Move>& moves) {
 	for (int i = 0; i <= depth; i++) {
 		std::cout << "Depth: " << i << std::endl;
-		if (dfs(cube, i, allowedMoves, NOTHING, predicate, heuristic, moves)) {
-			return true;
-		}
-	}
-	return false;
-}
-bool iterativeDeepening_threads(Cube& cube, int depth, std::vector<Move>& allowedMoves, std::function<bool(Cube&)> predicate, std::function<int(Cube&)> heuristic, std::vector<Move>& moves) {
-	for (int i = 0; i <= depth; i++) {
-		std::cout << "Depth: " << i << std::endl;
 		if (i > 7) {
 			std::vector<std::thread> threads;
 			std::vector<std::vector<Move>> thread_moves;
-			std::vector<std::vector<Move>> allowed_moves_list;
 			for (Move m:allowedMoves) {
-				allowed_moves_list.push_back(allowedMoves);
 				thread_moves.push_back(moves);
 			}
 			for (int j = 0; j < allowedMoves.size();j++) {
-				threads.push_back(std::thread(dfs_thread_init, executeMove(cube, (Move)allowedMoves[j]), i - 1, std::ref(allowed_moves_list.at(j)), (Move)allowedMoves[j], predicate, heuristic, std::ref(thread_moves.at(j))));
+				threads.push_back(std::thread(dfs_thread_init, executeMove(cube, (Move)allowedMoves[j]), i - 1, allowedMoves, (Move)allowedMoves[j], predicate, heuristic, std::ref(thread_moves.at(j))));
 			}
 
 			for (auto& th : threads) {
@@ -586,7 +576,7 @@ std::vector<Move> solve(Cube cube) {
 	std::vector<Move> solution;
 
 	std::vector<Move> allowedMoves = { L2, R2, F2, B2, U2, D2, L, R, F, B, U, D, L3, R3, F3, B3, U3, D3 };
-	bool found = iterativeDeepening_threads(cube, 6, allowedMoves, stage0Complete, stage0heuristic, solution);
+	iterativeDeepening(cube, 6, allowedMoves, stage0Complete, stage0heuristic, solution);
 	std::cout << "stage 0 complete" << std::endl;
 
 
@@ -595,7 +585,7 @@ std::vector<Move> solve(Cube cube) {
 		newCube = executeMove(newCube, move);
 	}
 	allowedMoves = { L2, R2, F2, B2, U2, D2, L, R, F, B, L3, R3, F3, B3 };
-	found = iterativeDeepening_threads(newCube, 10, allowedMoves, stage1Complete, stage1heuristic, solution);
+	iterativeDeepening(newCube, 10, allowedMoves, stage1Complete, stage1heuristic, solution);
 	std::cout << "stage 1 complete" << std::endl;
 
 
@@ -611,7 +601,7 @@ std::vector<Move> solve(Cube cube) {
 		newCube = executeMove(newCube, move);
 	}
 	allowedMoves = { L2, R2, F2, B2, U2, D2, L, R, L3, R3 };
-	found = iterativeDeepening_threads(newCube, 13, allowedMoves, stage2Complete, stage2heuristic, solution);
+	iterativeDeepening(newCube, 13, allowedMoves, stage2Complete, stage2heuristic, solution);
 	std::cout << "stage 2 complete" << std::endl;
 
 	delete[] stage2database;
@@ -622,7 +612,7 @@ std::vector<Move> solve(Cube cube) {
 		newCube = executeMove(newCube, move);
 	}
 	allowedMoves = { L2, R2, F2, B2, U2, D2 };
-	found = iterativeDeepening_threads(newCube, 15, allowedMoves, stage3Complete, stage3heuristic, solution);
+	iterativeDeepening(newCube, 15, allowedMoves, stage3Complete, stage3heuristic, solution);
 	std::cout << "stage 3 complete" << std::endl;
 
 	return solution;
