@@ -470,5 +470,6 @@
     <None Include="lib\glm\gtx\vector_angle.inl" />
     <None Include="lib\glm\gtx\vector_query.inl" />
     <None Include="lib\glm\gtx\wrap.inl" />
+    <None Include="README.md" />
   </ItemGroup>
 </Project>

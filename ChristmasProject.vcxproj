@@ -622,6 +622,7 @@
     <None Include="lib\glm\gtx\vector_query.inl" />
     <None Include="lib\glm\gtx\wrap.inl" />
     <None Include="lib\imgui.natstepfilter" />
+    <None Include="README.md" />
     <None Include="src\fragment_shader.glsl" />
     <None Include="src\vertex_shader.glsl" />
   </ItemGroup>
